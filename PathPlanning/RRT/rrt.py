@@ -240,9 +240,9 @@ class RRT:
         for (ox, oy, size) in obstacleList:
             dx_list = [ox - x for x in node.path_x]
             dy_list = [oy - y for y in node.path_y]
-            d_list = [dx * dx + dy * dy for (dx, dy) in zip(dx_list, dy_list)]
+            d_list = [np.sqrt(dx ** 2 + dy ** 2) for (dx, dy) in zip(dx_list, dy_list)]
 
-            if min(d_list) <= (size+robot_radius)**2:
+            if min(d_list) <= np.sqrt(2 * (size / 2) ** 2 + robot_radius ** 2):
                 return False  # collision
 
         return True  # safe

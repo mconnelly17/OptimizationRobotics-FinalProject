@@ -8,6 +8,7 @@ import copy
 import math
 import random
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import numpy as np
 import sys
 import pathlib
@@ -38,7 +39,7 @@ class RRTStarDubins(RRTStar):
 
     def __init__(self, start, goal, obstacle_list, rand_area,
                  goal_sample_rate=10,
-                 max_iter=200,
+                 max_iter=2000,
                  connect_circle_dist=50.0,
                  robot_radius=0.0,
                  ):
@@ -119,11 +120,11 @@ class RRTStarDubins(RRTStar):
                 plt.plot(node.path_x, node.path_y, "-g")
 
         for (ox, oy, size) in self.obstacle_list:
-            plt.plot(ox, oy, "ok", ms=30 * size)
+            plt.gca().add_patch(Rectangle((ox - size / 2, oy - size / 2), size, size, facecolor = 'grey'))
 
         plt.plot(self.start.x, self.start.y, "xr")
         plt.plot(self.end.x, self.end.y, "xr")
-        plt.axis([-2, 15, -2, 15])
+        plt.axis([0, 55, 0, 55])
         plt.grid(True)
         self.plot_start_goal_arrow()
         plt.pause(0.01)
@@ -217,19 +218,53 @@ def main():
 
     # ====Search Path with RRT====
     obstacleList = [
-        (5, 5, 1),
-        (3, 6, 2),
-        (3, 8, 2),
-        (3, 10, 2),
-        (7, 5, 2),
-        (9, 5, 2)
+        (7.5, 2.5, 5),
+        (7.5, 7.5, 5),
+        (7.5, 17.5, 5),
+        (7.5, 22.5, 5),
+        (7.5, 32.5, 5),
+        (7.5, 37.5, 5),
+        (7.5, 47.5, 5),
+        (7.5, 52.5, 5),
+        (17.5, 2.5, 5),
+        (17.5, 7.5, 5),
+        (17.5, 17.5, 5),
+        (17.5, 22.5, 5),
+        (17.5, 32.5, 5),
+        (17.5, 37.5, 5),
+        (17.5, 47.5, 5),
+        (17.5, 52.5, 5),
+        (27.5, 2.5, 5),
+        (27.5, 7.5, 5),
+        (27.5, 17.5, 5),
+        (27.5, 22.5, 5),
+        (27.5, 32.5, 5),
+        (27.5, 37.5, 5),
+        (27.5, 47.5, 5),
+        (27.5, 52.5, 5),
+        (37.5, 2.5, 5),
+        (37.5, 7.5, 5),
+        (37.5, 17.5, 5),
+        (37.5, 22.5, 5),
+        (37.5, 32.5, 5),
+        (37.5, 37.5, 5),
+        (37.5, 47.5, 5),
+        (37.5, 52.5, 5),
+        (47.5, 2.5, 5),
+        (47.5, 7.5, 5),
+        (47.5, 17.5, 5),
+        (47.5, 22.5, 5),
+        (47.5, 32.5, 5),
+        (47.5, 37.5, 5),
+        (47.5, 47.5, 5),
+        (47.5, 52.5, 5),
     ]  # [x,y,size(radius)]
 
     # Set Initial parameters
-    start = [0.0, 0.0, np.deg2rad(0.0)]
-    goal = [10.0, 10.0, np.deg2rad(0.0)]
+    start = [2.5, 2.5, np.deg2rad(90)]
+    goal = [42.5, 50, np.deg2rad(90)]
 
-    rrtstar_dubins = RRTStarDubins(start, goal, rand_area=[-2.0, 15.0], obstacle_list=obstacleList)
+    rrtstar_dubins = RRTStarDubins(start, goal, rand_area=[0, 55], obstacle_list=obstacleList)
     path = rrtstar_dubins.planning(animation=show_animation)
 
     # Draw final path
