@@ -22,7 +22,6 @@ from utils.plot import plot_arrow
 
 show_animation = True
 
-
 class RRTStarDubins(RRTStar):
     """
     Class for RRT star planning with Dubins path
@@ -39,10 +38,10 @@ class RRTStarDubins(RRTStar):
             self.path_yaw = []
 
     def __init__(self, start, goal, obstacle_list, rand_area,
-                 goal_sample_rate=10,
-                 max_iter=2500,
-                 connect_circle_dist=50.0,
-                 robot_radius=0.0,
+                 goal_sample_rate = 10,
+                 max_iter = 2500,
+                 connect_circle_dist = 50.0,
+                 robot_radius = 0.0,
                  ):
         """
         Setting Parameter
@@ -52,7 +51,6 @@ class RRTStarDubins(RRTStar):
         obstacleList:obstacle Positions [[x,y,size],...]
         randArea:Random Sampling Area [min,max]
         robot_radius: robot body modeled as circle with given radius
-
         """
         self.start = self.Node(start[0], start[1], start[2])
         self.end = self.Node(goal[0], goal[1], goal[2])
@@ -71,7 +69,7 @@ class RRTStarDubins(RRTStar):
         # New Variables
         self.initial_cost = np.inf
 
-    def planning(self, animation=True, branch_and_bound=True, global_path = None, starts = None):
+    def planning(self, animation = True, branch_and_bound = True, global_path = None, starts = None):
         """
         RRT Star planning
 
@@ -79,7 +77,6 @@ class RRTStarDubins(RRTStar):
         """
 
         self.node_list = [self.start]
-        #plt.plot(self.start.x, self.start.y, "xb") didn't do anything
         for i in range(self.max_iter):
             print("Iter:", i, ", number of nodes:", len(self.node_list))
             rnd = self.get_random_node()
@@ -90,20 +87,19 @@ class RRTStarDubins(RRTStar):
                     new_node, self.obstacle_list, self.robot_radius):
                 near_indexes = self.find_near_nodes(new_node)
                 new_node = self.choose_parent(new_node, near_indexes)
-                if new_node:
+                if new_node and self.calc_new_cost(new_node, self.end) < self.initial_cost:
                     self.node_list.append(new_node)
                     self.rewire(new_node, near_indexes)
 
-            if animation and i % 5 == 0:
+            if animation and i % 100 == 0:
                 self.plot_start_goal_arrow()
                 self.draw_graph(rnd, global_path, starts)
 
-            if new_node and branch_and_bound and self.initial_cost > 1e3:  # check reaching the goal
+            if new_node and branch_and_bound and self.initial_cost > 1e6:
                 last_index = self.search_best_goal_node()
                 if last_index:
-                    initial_path = self.generate_final_course(last_index)
-                    self.initial_cost = self.node_list[last_index].cost
-                    self.update_graph()
+                    self.initial_cost = self.calc_new_cost(self.node_list[last_index], self.end)
+                    self.update_graph(global_path, starts)
 
         print("reached max iteration")
 
@@ -115,7 +111,7 @@ class RRTStarDubins(RRTStar):
 
         return None
 
-    def draw_graph(self, rnd=None, global_path = None, starts = None):
+    def draw_graph(self, rnd = None, global_path = None, starts = None):
         plt.clf()
         # for stopping simulation with the esc key.
         plt.gcf().canvas.mpl_connect('key_release_event',
@@ -124,8 +120,11 @@ class RRTStarDubins(RRTStar):
         if rnd is not None:
             plt.plot(rnd.x, rnd.y, "^k")
         for node in self.node_list:
-            if node.parent:
+            if node.parent and node.parent in self.node_list:
                 plt.plot(node.path_x, node.path_y, "-g")
+            elif node.parent:
+                self.node_list.remove(node)
+
 
         for (ox, oy, size) in self.obstacle_list:
             plt.gca().add_patch(Rectangle((ox - size / 2, oy - size / 2), size, size, facecolor = 'grey'))
@@ -142,33 +141,38 @@ class RRTStarDubins(RRTStar):
         plt.grid(False)
         plt.tick_params(left = False, labelleft = False, labelbottom = False, bottom = False)
         self.plot_start_goal_arrow()
-        plt.pause(1e-3)
+        plt.pause(0.001)
 
-    def update_graph(self):
+    def update_graph(self, global_path = None, starts = None):
         plt.clf()
         # for stopping simulation with the esc key.
         plt.gcf().canvas.mpl_connect('key_release_event',
                                      lambda event: [exit(0) if event.key == 'escape' else None])
         
-        print(self.initial_cost)
         for node in self.node_list:
-            if node.parent and (node.cost + math.hypot(self.end.x - node.x, self.end.y - node.y)) > (self.initial_cost + 1e-3):
-                print(node.cost)
-                print(math.hypot(self.end.x - node.path_x[-1], self.end.y - node.path_y[-1]))
-                plt.plot(node.path_x, node.path_y, "-r")
+            if self.calc_new_cost(node, self.end) > self.initial_cost:
+                plt.plot(node.path_x, node.path_y, "-y")
                 self.node_list.remove(node)
             elif node.parent:
                 plt.plot(node.path_x, node.path_y, "-g")
 
         for (ox, oy, size) in self.obstacle_list:
             plt.gca().add_patch(Rectangle((ox - size / 2, oy - size / 2), size, size, facecolor = 'grey'))
+       
         plt.plot(self.start.x, self.start.y, "xr")
         plt.plot(self.end.x, self.end.y, "xr")
+        if starts is not None:
+            for i in range(len(starts)):
+                p1, p2, p3 = starts[i]
+                plt.plot(p1, p2, "xb")
+        if global_path is not None:
+            plt.plot([x for (x, y) in global_path], [y for (x, y) in global_path], '-r')
         plt.axis([-10, 65, -10, 65])
         plt.grid(False)
         plt.tick_params(left = False, labelleft = False, labelbottom = False, bottom = False)
         self.plot_start_goal_arrow()
-        plt.pause(5)
+        plt.pause(2)
+        self.draw_graph(global_path = global_path, starts = starts)
 
     def plot_start_goal_arrow(self):
         plot_arrow(self.start.x, self.start.y, self.start.yaw)
@@ -253,10 +257,8 @@ class RRTStarDubins(RRTStar):
         path.append([self.start.x, self.start.y])
         return path
 
-
 def main():
     print("Start rrt star with dubins planning")
-
 
     # ====Search Path with RRT====
     obstacleList = [
@@ -305,8 +307,6 @@ def main():
     # Set Initial parameters
     start = [2.5, 2.5, np.deg2rad(90)]
     goal = [42.5, 50, np.deg2rad(90)]
-
-    
 
     rrtstar_dubins = RRTStarDubins(start, goal, rand_area=[0, 55], obstacle_list=obstacleList)
     path = rrtstar_dubins.planning(animation=show_animation)
@@ -382,11 +382,9 @@ def main():
         for i in range(len(starts)):
             p1, p2, p3 = starts[i]
             plt.plot(p1, p2, "xb")
-        plt.grid(True)
+        plt.grid(False)
         plt.pause(0.001)
-
         plt.show()
-
 
 if __name__ == '__main__':
     main()

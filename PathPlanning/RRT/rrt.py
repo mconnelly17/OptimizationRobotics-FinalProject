@@ -242,8 +242,15 @@ class RRT:
             dy_list = [oy - y for y in node.path_y]
             d_list = [np.sqrt(dx ** 2 + dy ** 2) for (dx, dy) in zip(dx_list, dy_list)]
 
+            # Euclidean (Cirle)
             if min(d_list) <= np.sqrt(2 * (size / 2) ** 2 + robot_radius ** 2):
                 return False  # collision
+
+            # # Direct Check (Square)
+            # padding = 0.25
+            # for i in range(len(d_list)):
+            #     if np.abs(dx_list[i]) < (size / 2 + padding) and np.abs(dy_list[i]) < (size / 2 + padding):
+            #         return False  # collision 
 
         return True  # safe
 
