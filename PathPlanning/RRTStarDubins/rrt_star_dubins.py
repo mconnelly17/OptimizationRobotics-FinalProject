@@ -7,6 +7,7 @@ author: AtsushiSakai(@Atsushi_twi)
 import copy
 import math
 import random
+from tracemalloc import start
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
@@ -75,6 +76,7 @@ class RRTStarDubins(RRTStar):
         """
 
         self.node_list = [self.start]
+        #plt.plot(self.start.x, self.start.y, "xb") didn't do anything
         for i in range(self.max_iter):
             print("Iter:", i, ", number of nodes:", len(self.node_list))
             rnd = self.get_random_node()
@@ -264,13 +266,82 @@ def main():
     start = [2.5, 2.5, np.deg2rad(90)]
     goal = [42.5, 50, np.deg2rad(90)]
 
+    starts = [(2.5,2.5,np.deg2rad(90))]
+
     rrtstar_dubins = RRTStarDubins(start, goal, rand_area=[0, 55], obstacle_list=obstacleList)
     path = rrtstar_dubins.planning(animation=show_animation)
+    
+    #keep last 10 for tcom of path
+    size = len(path)
+    x1, y1 = path[size-249]
+    x2, y2 = path[size-251]
+    dx = x2 - x1
+    dy = y2 - y1
+    ang = np.arctan2(dy, dx)
+    iter_path = path[-250:]
+    x, y = iter_path[0]
+    new_start = (x,y,ang)
+    starts.append(new_start)
+    global_path = list(tuple())
+    local_path = list(tuple())
+    for i in range(len(iter_path)):
+        x, y = iter_path[i]
+        local_path.append((x,y)) #add to beginning
+    for i in range(len(local_path)):
+        val = i+1
+        x, y = local_path[-val:][0]
+        global_path.insert(0,(x,y))
+
+    while new_start != goal:
+        rrtstar_dubins = RRTStarDubins(new_start, goal, rand_area=[0, 55], obstacle_list=obstacleList)
+        path = rrtstar_dubins.planning(animation=show_animation)
+        size = len(path)
+        if size < 250:
+            iter_path = path
+            x, y = iter_path[0]
+            new_start = (x,y,np.deg2rad(90))
+            starts.append(new_start)
+            local_path = list(tuple())
+            for i in range(len(iter_path)):
+                x, y = iter_path[i]
+                local_path.append((x,y))
+            for i in range(len(local_path)):
+                val = i+1
+                x, y = local_path[-val:][0]
+                global_path.insert(0,(x,y))
+            break
+        else:
+            x1, y1 = path[size-249]
+            x2, y2 = path[size-251]
+            dx = x2 - x1
+            dy = y2 - y1
+            ang = np.arctan2(dy, dx)
+            iter_path = path[-250:]
+            x, y = iter_path[0]
+            new_start = (x,y,ang)
+            starts.append(new_start)
+            """
+            for i in range(len(iter_path)):
+                x, y = iter_path[-i:]
+                global_path.insert(0,(x,y))
+            """
+            local_path = list(tuple())
+            for i in range(len(iter_path)):
+                x, y = iter_path[i]
+                local_path.append((x,y))
+            for i in range(len(local_path)):
+                val = i+1
+                x, y = local_path[-val:][0]
+                global_path.insert(0,(x,y))
 
     # Draw final path
     if show_animation:  # pragma: no cover
+        for i in range(len(starts)):
+            p1, p2, p3 = starts[i]
+            plt.plot(p1, p2, "xb")
         rrtstar_dubins.draw_graph()
-        plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
+        print(global_path)
+        plt.plot([x for (x, y) in global_path], [y for (x, y) in global_path], '-r')
         plt.grid(True)
         plt.pause(0.001)
 
