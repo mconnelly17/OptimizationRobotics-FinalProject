@@ -67,7 +67,10 @@ class RRTStarDubins(RRTStar):
         self.goal_xy_th = 0.5
         self.robot_radius = robot_radius
 
-    def planning(self, animation=True, search_until_max_iter=True):
+        # New Variables
+        self.initial_cost = np.inf
+
+    def planning(self, animation=True, branch_and_bound=True):
         """
         RRT Star planning
 
@@ -93,10 +96,12 @@ class RRTStarDubins(RRTStar):
                 self.plot_start_goal_arrow()
                 self.draw_graph(rnd)
 
-            if (not search_until_max_iter) and new_node:  # check reaching the goal
+            if new_node and branch_and_bound and self.initial_cost > 1e3:  # check reaching the goal
                 last_index = self.search_best_goal_node()
                 if last_index:
-                    return self.generate_final_course(last_index)
+                    initial_path = self.generate_final_course(last_index)
+                    self.initial_cost = self.node_list[last_index].cost
+                    self.update_graph()
 
         print("reached max iteration")
 
@@ -113,6 +118,7 @@ class RRTStarDubins(RRTStar):
         # for stopping simulation with the esc key.
         plt.gcf().canvas.mpl_connect('key_release_event',
                                      lambda event: [exit(0) if event.key == 'escape' else None])
+        
         if rnd is not None:
             plt.plot(rnd.x, rnd.y, "^k")
         for node in self.node_list:
@@ -124,10 +130,37 @@ class RRTStarDubins(RRTStar):
 
         plt.plot(self.start.x, self.start.y, "xr")
         plt.plot(self.end.x, self.end.y, "xr")
-        plt.axis([0, 55, 0, 55])
-        plt.grid(True)
+        plt.axis([-10, 65, -10, 65])
+        plt.grid(False)
+        plt.tick_params(left = False, labelleft = False, labelbottom = False, bottom = False)
         self.plot_start_goal_arrow()
-        plt.pause(0.01)
+        plt.pause(1e-3)
+
+    def update_graph(self):
+        plt.clf()
+        # for stopping simulation with the esc key.
+        plt.gcf().canvas.mpl_connect('key_release_event',
+                                     lambda event: [exit(0) if event.key == 'escape' else None])
+        
+        print(self.initial_cost)
+        for node in self.node_list:
+            if node.parent and (node.cost + math.hypot(self.end.x - node.x, self.end.y - node.y)) > (self.initial_cost + 1e-3):
+                print(node.cost)
+                print(math.hypot(self.end.x - node.path_x[-1], self.end.y - node.path_y[-1]))
+                plt.plot(node.path_x, node.path_y, "-r")
+                self.node_list.remove(node)
+            elif node.parent:
+                plt.plot(node.path_x, node.path_y, "-g")
+
+        for (ox, oy, size) in self.obstacle_list:
+            plt.gca().add_patch(Rectangle((ox - size / 2, oy - size / 2), size, size, facecolor = 'grey'))
+        plt.plot(self.start.x, self.start.y, "xr")
+        plt.plot(self.end.x, self.end.y, "xr")
+        plt.axis([-10, 65, -10, 65])
+        plt.grid(False)
+        plt.tick_params(left = False, labelleft = False, labelbottom = False, bottom = False)
+        self.plot_start_goal_arrow()
+        plt.pause(5)
 
     def plot_start_goal_arrow(self):
         plot_arrow(self.start.x, self.start.y, self.start.yaw)
